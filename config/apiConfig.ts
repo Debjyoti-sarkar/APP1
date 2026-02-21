@@ -14,7 +14,7 @@ import { Platform } from 'react-native';
 // Update this with your machine's local IP for physical device testing
 // Find it by running: ipconfig (Windows) or ifconfig (Mac/Linux)
 // Example: '192.168.1.100' (not localhost or 10.0.2.2)
-const PHYSICAL_DEVICE_IP = '192.168.1.100'; // ← UPDATE THIS WITH YOUR MACHINE IP
+const PHYSICAL_DEVICE_IP = '172.16.7.167'; // ← YOUR MACHINE IP (Ethernet)
 const BACKEND_PORT = 5000;
 
 // =========================================================
