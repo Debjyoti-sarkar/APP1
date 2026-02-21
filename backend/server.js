@@ -55,8 +55,11 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Listen on all network interfaces (0.0.0.0) for Android emulator access
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 KAVACH Backend Server started on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 API available at: http://localhost:${PORT}`);
+  console.log(`📱 Android Emulator: http://10.0.2.2:${PORT}`);
+  console.log(`🌐 Network Interfaces: All (0.0.0.0)`);
 });
