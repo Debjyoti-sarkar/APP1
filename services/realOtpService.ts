@@ -1,34 +1,16 @@
 /**
  * Real OTP Service - Frontend
  * Handles real OTP sending and verification using backend Fast2SMS integration
+ * With retry logic and improved error handling for network issues
  */
 
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { getApiBaseUrl, axiosConfig, retryConfig, getNetworkInfo } from '@/config/apiConfig';
 
-// Base URL for backend OTP API
-// On Android emulator: use 10.0.2.2 to point to host machine
-// On iOS simulator: use localhost
-// On web/Expo web: use localhost
-// On real device: use actual machine IP (update this as needed)
-let API_BASE_URL = 'http://localhost:5000/api';
-
-if (__DEV__) {
-  if (Platform.OS === 'android') {
-    // Android emulator special IP for host machine
-    API_BASE_URL = 'http://10.0.2.2:5000/api';
-  } else if (Platform.OS === 'ios') {
-    // iOS simulator can use localhost
-    API_BASE_URL = 'http://localhost:5000/api';
-  } else if (Platform.OS === 'web') {
-    // Web platform
-    API_BASE_URL = 'http://localhost:5000/api';
-  }
-} else {
-  // Production
-  API_BASE_URL = 'https://your-production-api.com/api';
-}
+// Create axios instance with custom config
+const axiosInstance: AxiosInstance = axios.create(axiosConfig);
 
 // Helper function to format phone number correctly
 const formatPhoneNumber = (phone: string): string => {
@@ -65,19 +47,62 @@ export interface OTPResponse {
 
 class RealOTPService {
   private baseURL: string;
+  private axiosInstance: AxiosInstance;
 
-  constructor(baseURL: string = API_BASE_URL) {
+  constructor(baseURL: string = getApiBaseUrl()) {
     this.baseURL = baseURL;
+    this.axiosInstance = axiosInstance;
   }
 
   /**
-   * Send OTP to a phone number
+   * Retry logic for failed requests
+   */
+  private async retryRequest<T>(
+    fn: () => Promise<T>,
+    retries: number = retryConfig.maxRetries
+  ): Promise<T> {
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        lastError = error;
+        
+        // Check if error is retryable
+        const status = error.response?.status;
+        const isRetryable = 
+          error.code === 'ECONNABORTED' || // timeout
+          error.code === 'ECONNREFUSED' || // connection refused
+          error.code === 'ETIMEDOUT' ||    // timeout
+          error.message.includes('Network Error') ||
+          (status && retryConfig.retryableStatusCodes.includes(status));
+
+        if (!isRetryable) {
+          throw error;
+        }
+
+        if (attempt < retries) {
+          const delay = retryConfig.retryDelay * attempt;
+          console.log(`🔄 Retry attempt ${attempt}/${retries} after ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError;
+  }
+
+  /**
+   * Send OTP to a phone number with retry logic
    * @param phoneNumber - Phone number with or without country code
    * @returns Promise with OTP sending result
    */
   async sendOTP(phoneNumber: string): Promise<OTPResponse> {
     try {
-      // Log the API endpoint being used
+      // Log network info for debugging
+      const networkInfo = getNetworkInfo();
+      console.log(`📊 Network Info:`, networkInfo);
       console.log(`📡 Using API endpoint: ${this.baseURL}`);
       console.log(`📱 Platform: ${Platform.OS}`);
       console.log(`📱 Sending real SMS OTP to: ${phoneNumber}`);
@@ -85,34 +110,67 @@ class RealOTPService {
       // Format phone number properly
       const formattedPhone = formatPhoneNumber(phoneNumber);
 
-      const response = await axios.post(`${this.baseURL}/otp/send`, {
-        phoneNumber: formattedPhone,
+      // Use retry logic for the actual request
+      const response = await this.retryRequest(async () => {
+        return await this.axiosInstance.post(`${this.baseURL}/otp/send`, {
+          phoneNumber: formattedPhone,
+        });
       });
 
       // Store phone number for verification
       await AsyncStorage.setItem('otp_phone_number', formattedPhone);
       await AsyncStorage.setItem('otp_sent_time', Date.now().toString());
 
+      console.log('✅ OTP sent successfully');
       return response.data;
     } catch (error: any) {
       console.error('❌ Error sending OTP:', error.message);
       console.error('📡 API Endpoint attempted:', this.baseURL);
-      console.error('🔍 Error details:', error);
+      console.error('🔍 Error details:', {
+        code: error.code,
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data,
+      });
       
       if (error.response) {
         return error.response.data;
       }
       
+      // Network error details
       return {
         success: false,
-        message: 'Failed to send OTP. Please check your network connection.',
+        message: this.getNetworkErrorMessage(error),
         error: error.message,
       };
     }
   }
 
   /**
-   * Verify OTP code
+   * Get user-friendly error message based on error type
+   */
+  private getNetworkErrorMessage(error: any): string {
+    const code = error.code;
+    const message = error.message;
+
+    if (code === 'ECONNREFUSED') {
+      return '❌ Backend server not running. Make sure backend is started on port 5000. (ECONNREFUSED)';
+    }
+    if (code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
+      return '⏱️ Request timeout. Backend server may be slow or unreachable. Check network connection.';
+    }
+    if (message.includes('Network Error')) {
+      return '📡 Network error. Ensure backend is running and your device can reach it. Check IP configuration in config/apiConfig.ts';
+    }
+    if (message.includes('getaddrinfo ENOTFOUND')) {
+      return '🔍 Cannot resolve hostname. Check API endpoint configuration.';
+    }
+    
+    return `❌ Network error: ${message}`;
+  }
+
+  /**
+   * Verify OTP code with retry logic
    * @param phoneNumber - Phone number
    * @param code - OTP code entered by user
    * @returns Promise with verification result
@@ -129,9 +187,12 @@ class RealOTPService {
         formattedPhone = '+91' + formattedPhone.replace(/^0+/, '');
       }
 
-      const response = await axios.post(`${this.baseURL}/otp/verify`, {
-        phoneNumber: formattedPhone,
-        code: code.trim(),
+      // Use retry logic for the actual request
+      const response = await this.retryRequest(async () => {
+        return await this.axiosInstance.post(`${this.baseURL}/otp/verify`, {
+          phoneNumber: formattedPhone,
+          code: code.trim(),
+        });
       });
 
       // Clear stored data if verification successful
@@ -145,7 +206,12 @@ class RealOTPService {
     } catch (error: any) {
       console.error('❌ Error verifying OTP:', error.message);
       console.error('📡 API Endpoint attempted:', this.baseURL);
-      console.error('🔍 Error details:', error);
+      console.error('🔍 Error details:', {
+        code: error.code,
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data,
+      });
       
       if (error.response) {
         return error.response.data;
@@ -153,7 +219,7 @@ class RealOTPService {
       
       return {
         success: false,
-        message: 'Failed to verify OTP. Please try again.',
+        message: this.getNetworkErrorMessage(error),
         error: error.message,
       };
     }
