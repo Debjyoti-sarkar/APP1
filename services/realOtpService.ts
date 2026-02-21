@@ -6,11 +6,34 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Base URL for your backend API
-// Update this with your actual backend URL
+// Base URL for backend OTP API
 const API_BASE_URL = __DEV__ 
   ? 'http://localhost:5000/api' 
   : 'https://your-production-api.com/api';
+
+// Helper function to format phone number correctly
+const formatPhoneNumber = (phone: string): string => {
+  // Remove all non-digits
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // If it's 10 digits (Indian number), add +91
+  if (cleaned.length === 10) {
+    return `+91${cleaned}`;
+  }
+  
+  // If it's already 12 digits (with country code), add +
+  if (cleaned.length === 12) {
+    return `+${cleaned}`;
+  }
+  
+  // If it starts with country code but no +, add +
+  if (cleaned.length > 10 && !phone.startsWith('+')) {
+    return `+${cleaned}`;
+  }
+  
+  // Return as is if already formatted
+  return phone.startsWith('+') ? phone : `+91${cleaned}`;
+};
 
 export interface OTPResponse {
   success: boolean;
@@ -35,13 +58,8 @@ class RealOTPService {
    */
   async sendOTP(phoneNumber: string): Promise<OTPResponse> {
     try {
-      // Format phone number
-      let formattedPhone = phoneNumber.trim();
-      
-      // If number doesn't start with +, add +91 for India
-      if (!formattedPhone.startsWith('+')) {
-        formattedPhone = '+91' + formattedPhone.replace(/^0+/, '');
-      }
+      // Format phone number properly
+      const formattedPhone = formatPhoneNumber(phoneNumber);
 
       const response = await axios.post(`${this.baseURL}/otp/send`, {
         phoneNumber: formattedPhone,

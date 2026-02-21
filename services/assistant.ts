@@ -1,5 +1,7 @@
-// Your backend is running on PORT 3001 (NOT 3000)
-export const BASE_URL = "https://curvy-sides-carry.loca.lt";
+// Backend API running locally on port 5000
+export const BASE_URL = __DEV__ 
+  ? "http://localhost:5000" 
+  : "https://your-production-api.com";
 
 export const TRANSCRIBE_URL = BASE_URL + "/assistant/transcribe";
 export const PARSE_URL = BASE_URL + "/assistant/parse";
