@@ -1,7 +1,7 @@
 /**
  * Fast2SMS OTP Service
  * Handles real OTP sending via Fast2SMS Bulk SMS API
- * Includes test/development mode for testing without Fast2SMS account activation
+ * Production-only real SMS sending - no test/bypass mode
  */
 
 const axios = require('axios');
@@ -9,10 +9,6 @@ const axios = require('axios');
 // Fast2SMS Configuration
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY;
 const FAST2SMS_BASE_URL = 'https://www.fast2sms.com/dev/bulkV2';
-const USE_MOCK_SMS = process.env.USE_MOCK_SMS === 'true'; // Enable test mode
-
-// In-memory storage for OTPs (development only - use Redis in production)
-const otpStorage = new Map();
 
 /**
  * Send OTP via Fast2SMS
@@ -24,7 +20,7 @@ async function sendOTP(phoneNumber) {
   let otp;
   
   try {
-    if (!FAST2SMS_API_KEY && !USE_MOCK_SMS) {
+    if (!FAST2SMS_API_KEY) {
       throw new Error('Fast2SMS API key not configured');
     }
 
@@ -44,24 +40,6 @@ async function sendOTP(phoneNumber) {
     otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     console.log(`📤 Sending OTP to +${cleanPhone}: ${otp}`);
-
-    // For testing without Fast2SMS activation
-    if (USE_MOCK_SMS) {
-      console.log(`✅ [MOCK MODE] OTP stored for testing: ${otp}`);
-      otpStorage.set(cleanPhone, {
-        otp: otp,
-        timestamp: Date.now(),
-        verified: false,
-      });
-      
-      return {
-        success: true,
-        status: 'pending',
-        to: `+${cleanPhone}`,
-        otp: otp, // Return OTP in test mode for testing
-        message: `[TEST MODE] OTP ${otp} will be sent to +${cleanPhone}`,
-      };
-    }
 
     // Send via Fast2SMS Bulk SMS API (route 'q' doesn't require verification)
     const response = await axios.post(
@@ -83,12 +61,12 @@ async function sendOTP(phoneNumber) {
 
     // Fast2SMS returns success if return code is 200
     if (response.data.return && response.data.return === true) {
+      console.log('✅ OTP sent successfully via Fast2SMS');
       return {
         success: true,
-        status: 'pending',
+        status: 'sent',
         to: `+${cleanPhone}`,
-        otp: otp, // Return OTP for dev/testing (remove in production for security)
-        message: 'OTP sent successfully',
+        message: 'OTP sent successfully to your phone',
         request_id: response.data.request_id || Date.now().toString(),
       };
     } else {
@@ -96,22 +74,12 @@ async function sendOTP(phoneNumber) {
     }
   } catch (error) {
     console.error('❌ Fast2SMS Error:', error.response?.data || error.message);
-    
-    // Store OTP for verification even if sending fails
-    otpStorage.set(cleanPhone, {
-      otp: otp,
-      timestamp: Date.now(),
-      verified: false,
-    });
 
     return {
-      success: true, // Return success even if sending fails - OTP is stored for testing
-      status: 'pending',
-      to: `+${cleanPhone}`,
-      otp: otp, // Return OTP in test/fallback mode for testing
-      message: `OTP stored for testing: ${error.response?.data?.message || error.message}`,
-      error: error.response?.data?.message || error.message,
-      testMode: true,
+      success: false,
+      status: 'failed',
+      message: error.response?.data?.message || error.message || 'Failed to send OTP',
+      error: error.message,
     };
   }
 }
