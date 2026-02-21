@@ -371,7 +371,7 @@ If you encounter any Axios errors despite this resolution:
    - Check console.log outputs in service files
 
 4. **Provide information:**
-   - Exact error message
+   - Exact error messagef
    - Error code (ECONNREFUSED, ETIMEDOUT, etc.)
    - Your setup (platform, device type)
    - What you were doing when error occurred
