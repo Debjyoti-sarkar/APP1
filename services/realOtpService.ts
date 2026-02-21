@@ -1,15 +1,34 @@
 /**
  * Real OTP Service - Frontend
- * Handles real OTP sending and verification using backend Twilio integration
+ * Handles real OTP sending and verification using backend Fast2SMS integration
  */
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Base URL for backend OTP API
-const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:5000/api' 
-  : 'https://your-production-api.com/api';
+// On Android emulator: use 10.0.2.2 to point to host machine
+// On iOS simulator: use localhost
+// On web/Expo web: use localhost
+// On real device: use actual machine IP (update this as needed)
+let API_BASE_URL = 'http://localhost:5000/api';
+
+if (__DEV__) {
+  if (Platform.OS === 'android') {
+    // Android emulator special IP for host machine
+    API_BASE_URL = 'http://10.0.2.2:5000/api';
+  } else if (Platform.OS === 'ios') {
+    // iOS simulator can use localhost
+    API_BASE_URL = 'http://localhost:5000/api';
+  } else if (Platform.OS === 'web') {
+    // Web platform
+    API_BASE_URL = 'http://localhost:5000/api';
+  }
+} else {
+  // Production
+  API_BASE_URL = 'https://your-production-api.com/api';
+}
 
 // Helper function to format phone number correctly
 const formatPhoneNumber = (phone: string): string => {
@@ -58,6 +77,11 @@ class RealOTPService {
    */
   async sendOTP(phoneNumber: string): Promise<OTPResponse> {
     try {
+      // Log the API endpoint being used
+      console.log(`📡 Using API endpoint: ${this.baseURL}`);
+      console.log(`📱 Platform: ${Platform.OS}`);
+      console.log(`📱 Sending real SMS OTP to: ${phoneNumber}`);
+      
       // Format phone number properly
       const formattedPhone = formatPhoneNumber(phoneNumber);
 
@@ -71,7 +95,9 @@ class RealOTPService {
 
       return response.data;
     } catch (error: any) {
-      console.error('Error sending OTP:', error);
+      console.error('❌ Error sending OTP:', error.message);
+      console.error('📡 API Endpoint attempted:', this.baseURL);
+      console.error('🔍 Error details:', error);
       
       if (error.response) {
         return error.response.data;
@@ -93,6 +119,9 @@ class RealOTPService {
    */
   async verifyOTP(phoneNumber: string, code: string): Promise<OTPResponse> {
     try {
+      console.log(`🔍 Verifying OTP for: ${phoneNumber}`);
+      console.log(`📡 Using API endpoint: ${this.baseURL}`);
+      
       // Format phone number
       let formattedPhone = phoneNumber.trim();
       
@@ -107,13 +136,16 @@ class RealOTPService {
 
       // Clear stored data if verification successful
       if (response.data.success) {
+        console.log('✅ OTP verification successful');
         await AsyncStorage.removeItem('otp_phone_number');
         await AsyncStorage.removeItem('otp_sent_time');
       }
 
       return response.data;
     } catch (error: any) {
-      console.error('Error verifying OTP:', error);
+      console.error('❌ Error verifying OTP:', error.message);
+      console.error('📡 API Endpoint attempted:', this.baseURL);
+      console.error('🔍 Error details:', error);
       
       if (error.response) {
         return error.response.data;
