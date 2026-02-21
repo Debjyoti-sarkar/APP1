@@ -191,11 +191,6 @@ export default function PhoneVerificationScreen() {
           >
             {loading ? <ActivityIndicator color="#FFFFFF" /> : "Send OTP"}
           </Button>
-
-          {/* Recaptcha notice */}
-          <View style={styles.recaptchaNotice}>
-            <FirebaseRecaptchaBanner />
-          </View>
         </View>
       ) : (
         <View style={styles.inputSection}>
@@ -308,10 +303,6 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   button: { marginBottom: Spacing.lg },
-  recaptchaNotice: {
-    marginTop: Spacing.md,
-    alignItems: "center"
-  },
   otpSentBox: {
     flexDirection: "row",
     alignItems: "center",
