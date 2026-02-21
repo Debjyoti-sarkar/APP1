@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const multer = require("multer");
 const connectDB = require("./config/db");
 
 const app = express();
@@ -11,6 +12,41 @@ connectDB();
 // Middleware
 app.use(cors());
 app.use(express.json({ extended: false }));
+
+// File upload middleware for voice assistant (multipart/form-data)
+const upload = multer({
+  storage: multer.memoryStorage(), // Store files in memory temporarily
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept audio files
+    if (file.mimetype.startsWith("audio/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only audio files are allowed"));
+    }
+  },
+});
+
+// Make upload middleware available globally
+app.use((req, res, next) => {
+  // Apply multer for audio uploads
+  if (req.path.includes("/assistant/")) {
+    upload.single("audio")(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        console.error("🚨 Multer error:", err);
+        return res.status(400).json({ error: err.message });
+      } else if (err) {
+        console.error("🚨 File upload error:", err);
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  } else {
+    next();
+  }
+});
 
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
@@ -27,6 +63,7 @@ app.use("/api/spam", require("./routes/spamRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/activity", require("./routes/activityRoutes"));
 app.use("/api/user", require("./routes/userRoutes"));
+app.use("/api/assistant", require("./routes/assistantRoutes")); // Voice Assistant
 
 // Health check
 app.get("/", (req, res) => {
@@ -43,12 +80,13 @@ app.get("/", (req, res) => {
       emi: "/api/emi",
       qr: "/api/qr",
       offlineOtp: "/api/offline-otp",
-      otp: "/api/otp", // Real OTP with Twilio
-      aadhaar: "/api/aadhaar", // Aadhaar Verification
+      otp: "/api/otp",
+      aadhaar: "/api/aadhaar",
       spam: "/api/spam",
       notifications: "/api/notifications",
       activity: "/api/activity",
       user: "/api/user",
+      assistant: "/api/assistant", // Voice Assistant endpoints
     },
   });
 });

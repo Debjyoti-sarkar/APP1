@@ -23,6 +23,9 @@ import { Spacing, BorderRadius, KAVACHColors, Shadows } from "@/constants/theme"
 import { RootStackParamList } from "@/navigation/RootNavigator";
 import RealOTPService from "@/services/realOtpService";
 
+// ⚠️ DEMO MODE - Disable Real OTP (set to false to enable real SMS)
+const USE_DEMO_OTP = true;
+
 const realOtpService = new RealOTPService();
 
 export default function PhoneVerificationScreen() {
@@ -56,27 +59,43 @@ export default function PhoneVerificationScreen() {
 
     setLoading(true);
     try {
-      console.log("📱 Sending real SMS OTP to:", phone);
-
-      const result = await realOtpService.sendOTP(phone);
-
-      if (result.success) {
-        console.log("✅ OTP sent successfully");
+      if (USE_DEMO_OTP) {
+        // Demo mode - generate mock OTP
+        console.log("🎭 DEMO MODE: Using fake OTP for testing");
+        const demoOtp = "123456";
+        setSentOTP(demoOtp);
         setStep("otp");
         setResendTimer(60);
-        
-        // Store the sent OTP for verification (if returned in test mode)
-        if (result.otp) {
-          setSentOTP(result.otp);
-        }
 
         Alert.alert(
-          "OTP Sent!",
-          `A 6-digit verification code has been sent to +91${phone}. Please check your SMS.`,
+          "Demo OTP",
+          `📱 Demo Mode Active\n\nPhone: +91${phone}\nDemo OTP: ${demoOtp}\n\nUse this code to test the verification flow.`,
           [{ text: "OK" }]
         );
       } else {
-        Alert.alert("Error", result.message || "Failed to send OTP. Please try again.");
+        // Real mode - send actual SMS
+        console.log("📱 Sending real SMS OTP to:", phone);
+
+        const result = await realOtpService.sendOTP(phone);
+
+        if (result.success) {
+          console.log("✅ OTP sent successfully");
+          setStep("otp");
+          setResendTimer(60);
+          
+          // Store the sent OTP for verification (if returned in test mode)
+          if (result.otp) {
+            setSentOTP(result.otp);
+          }
+
+          Alert.alert(
+            "OTP Sent!",
+            `A 6-digit verification code has been sent to +91${phone}. Please check your SMS.`,
+            [{ text: "OK" }]
+          );
+        } else {
+          Alert.alert("Error", result.message || "Failed to send OTP. Please try again.");
+        }
       }
     } catch (error: any) {
       console.error("Send OTP error:", error);
@@ -95,19 +114,34 @@ export default function PhoneVerificationScreen() {
     setLoading(true);
 
     try {
-      console.log("🔍 Verifying OTP...");
-
-      const result = await realOtpService.verifyOTP(phone, otp);
-
-      if (result.success) {
-        console.log("✅ Phone verified with SMS OTP!");
-
-        await setPhoneNumber(phone);
-        setAuthStep("bank_linking");
-        navigation.navigate("BankLinking");
+      if (USE_DEMO_OTP) {
+        // Demo mode - verify against sent demo OTP
+        console.log("🎭 DEMO MODE: Verifying demo OTP");
+        if (otp === sentOTP) {
+          console.log("✅ Demo OTP verified!");
+          await setPhoneNumber(phone);
+          setAuthStep("bank_linking");
+          navigation.navigate("BankLinking");
+        } else {
+          Alert.alert("Verification Failed", `Incorrect OTP. Demo OTP is: ${sentOTP}`);
+          setOtp("");
+        }
       } else {
-        Alert.alert("Verification Failed", result.message || "Invalid OTP. Please try again.");
-        setOtp("");
+        // Real mode - verify with backend
+        console.log("🔍 Verifying OTP...");
+
+        const result = await realOtpService.verifyOTP(phone, otp);
+
+        if (result.success) {
+          console.log("✅ Phone verified with SMS OTP!");
+
+          await setPhoneNumber(phone);
+          setAuthStep("bank_linking");
+          navigation.navigate("BankLinking");
+        } else {
+          Alert.alert("Verification Failed", result.message || "Invalid OTP. Please try again.");
+          setOtp("");
+        }
       }
     } catch (error: any) {
       console.error("Verify OTP error:", error);
@@ -159,10 +193,10 @@ export default function PhoneVerificationScreen() {
       </ThemedText>
 
       {/* Real SMS indicator */}
-      <View style={[styles.smsBanner, { backgroundColor: KAVACHColors.success + "20" }]}>
-        <Feather name="check-circle" size={16} color={KAVACHColors.success} />
-        <ThemedText type="caption" style={{ color: KAVACHColors.success, marginLeft: 8 }}>
-          Real SMS OTP will be sent to your phone
+      <View style={[styles.smsBanner, { backgroundColor: USE_DEMO_OTP ? KAVACHColors.warning + "20" : KAVACHColors.success + "20" }]}>
+        <Feather name={USE_DEMO_OTP ? "alert-circle" : "check-circle"} size={16} color={USE_DEMO_OTP ? KAVACHColors.warning : KAVACHColors.success} />
+        <ThemedText type="caption" style={{ color: USE_DEMO_OTP ? KAVACHColors.warning : KAVACHColors.success, marginLeft: 8 }}>
+          {USE_DEMO_OTP ? "🎭 Demo Mode: Using test OTP (123456)" : "Real SMS OTP will be sent to your phone"}
         </ThemedText>
       </View>
 

@@ -257,9 +257,8 @@ const VoiceRecorder = forwardRef<VoiceRecorderHandle, VoiceRecorderProps>(
         const res = await fetch(TRANSCRIBE_URL, {
           method: "POST",
           body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+          // ⚠️ IMPORTANT: Do NOT set Content-Type header manually when using FormData
+          // The browser/React Native will set it automatically with proper boundary
         });
 
         if (!res.ok) {
@@ -280,7 +279,16 @@ const VoiceRecorder = forwardRef<VoiceRecorderHandle, VoiceRecorderProps>(
 
       } catch (err) {
         console.error("🚨 Stop recording/transcription error:", err);
-        Alert.alert("Error", "Failed to process audio.");
+        
+        // Provide detailed error message
+        let errorMsg = "Failed to process audio.";
+        if (err instanceof TypeError) {
+          errorMsg = "Network error - ensure backend is running on http://localhost:5000";
+        } else if (err?.message?.includes("Server error")) {
+          errorMsg = "Backend error - check server logs";
+        }
+        
+        Alert.alert("Error", errorMsg);
       } finally {
         setStatus("idle");
         onStateChange?.(false, false);
