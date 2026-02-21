@@ -57,13 +57,14 @@ app.use("/api/loans", require("./routes/loanRoutes"));
 app.use("/api/emi", require("./routes/emiRoutes"));
 app.use("/api/qr", require("./routes/qrRoutes"));
 app.use("/api/offline-otp", require("./routes/offlineOtpRoutes"));
-app.use("/api/otp", require("./routes/otpRoutes")); // Real OTP with Twilio
+app.use("/api/otp", require("./routes/otpRoutes")); // Real OTP
 app.use("/api/aadhaar", require("./routes/aadhaarRoutes")); // Aadhaar Verification
 app.use("/api/spam", require("./routes/spamRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/activity", require("./routes/activityRoutes"));
 app.use("/api/user", require("./routes/userRoutes"));
 app.use("/api/assistant", require("./routes/assistantRoutes")); // Voice Assistant
+app.use("/api/behavioral", require("./routes/behavioralRoutes")); // Behavioral Analytics (BAA)
 
 // Health check
 app.get("/", (req, res) => {
@@ -86,7 +87,8 @@ app.get("/", (req, res) => {
       notifications: "/api/notifications",
       activity: "/api/activity",
       user: "/api/user",
-      assistant: "/api/assistant", // Voice Assistant endpoints
+      assistant: "/api/assistant", // Voice Assistant
+      behavioral: "/api/behavioral", // Behavioral Analytics (BAA)
     },
   });
 });
