@@ -1,0 +1,78 @@
+# ⚡ EXPO GO QUICK START (Copy & Paste)
+
+## 📋 JUST RUN THESE COMMANDS
+
+### **Terminal #1 - BACKEND**
+```powershell
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+cd c:\Users\DebSarkar\Desktop\KAVACH-main\server
+node simple-voice-server.js
+```
+
+**Wait for:**
+```
+✅ Deepgram SDK v4 loaded and ready
+🚀 Server listening on port 3001
+```
+
+---
+
+### **Terminal #2 - EXPO**
+```powershell
+cd c:\Users\DebSarkar\Desktop\KAVACH-main
+npx expo start
+```
+
+**Wait for:**
+```
+› Metro server started on port 8081
+› Press 'e' to send to your phone with Expo Go
+```
+
+---
+
+### **On Phone**
+```
+Press 'e' in Terminal #2
+
+OR
+
+Scan QR code with Expo Go app
+```
+
+---
+
+## ✅ DONE!
+
+App loads on phone. Navigate to **Voice Assistant** screen and test:
+
+```
+Say: "Send 500 to Rahul"
+↓
+Say: "Yes"
+↓
+✅ Navigate to SendMoney with amount=500, recipient=Rahul
+```
+
+---
+
+## 🐛 If Something Breaks
+
+```powershell
+# Kill everything
+Get-Process node | Stop-Process -Force
+
+# Restart backend
+cd c:\Users\DebSarkar\Desktop\KAVACH-main\server
+node simple-voice-server.js
+
+# In new terminal, restart expo
+cd c:\Users\DebSarkar\Desktop\KAVACH-main
+npx expo start --clear
+```
+
+---
+
+## 📚 Need Details?
+
+Read: `RUN_COMPLETE_PROJECT_EXPO_GO.md`

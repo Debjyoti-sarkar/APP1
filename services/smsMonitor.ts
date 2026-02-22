@@ -6,8 +6,9 @@
 import { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// API Configuration
-const API_BASE_URL = 'http://172.16.10.100:3001/api/sms';
+// SMS monitor service - using correct machine IP (172.16.7.167)
+const MACHINE_IP = '172.16.7.167';
+const API_BASE_URL = `http://${MACHINE_IP}:3001/api/sms`;
 
 // Types
 export interface SMSMessage {

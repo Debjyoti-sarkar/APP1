@@ -9,11 +9,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Animated
 } from "react-native";
 import * as Speech from 'expo-speech';
 import { useNavigation } from '@react-navigation/native';
 import VoiceRecorder, { VoiceRecorderHandle } from "../components/VoiceRecorder";
+import VoiceAssistantDiagnostics from "../components/VoiceAssistantDiagnostics";
 import { AssistantInput } from "../components/AssistantInput";
 import { TestConnection } from "../components/TestConnection";
 import { parseText, ParseResponse, getTTSLanguage } from "../services/assistant";
@@ -242,6 +242,11 @@ export default function VoiceAssistantScreen() {
       // Normal processing - parse the text
       const response: ParseResponse = await parseText(text);
 
+      console.log("🎯 ParseResponse:", JSON.stringify(response, null, 2));
+      console.log(`💰 Action suggested: ${response.actionSuggested}`);
+      console.log(`🏷️ Intent: ${response.intent}`);
+      console.log(`📦 Entities:`, JSON.stringify(response.entities));
+
       addMessage(
         response.replyText || "I understood your request.",
         false,
@@ -263,6 +268,7 @@ export default function VoiceAssistantScreen() {
 
       // For money transfers, ask for confirmation first
       if (response.actionSuggested === 'prefill_and_navigate_upi' && response.entities?.amount) {
+        console.log("💳 Money transfer detected - asking for confirmation");
         const confirmPrompt = response.detectedLanguage === 'hi'
           ? `क्या आप ₹${response.entities.amount} ${response.entities.recipient ? response.entities.recipient + ' को' : ''} भेजना चाहते हैं? हां या नहीं बोलें।`
           : response.detectedLanguage === 'hi-en'
@@ -302,8 +308,13 @@ export default function VoiceAssistantScreen() {
 
   // Execute action immediately (used after confirmation)
   const executeAction = (action: string, entities?: Record<string, any>) => {
+    console.log("🚀 executeAction called:");
+    console.log(`   Action: ${action}`);
+    console.log(`   Entities:`, JSON.stringify(entities));
+    
     switch (action) {
       case "prefill_and_navigate_upi":
+        console.log("📱 Navigating to SendMoney with:", { amount: entities?.amount, recipient: entities?.recipient });
         navigation.navigate("SendMoney" as never, {
           amount: entities?.amount,
           recipient: entities?.recipient,
@@ -312,27 +323,32 @@ export default function VoiceAssistantScreen() {
         break;
 
       case "ask_pin_for_balance":
+        console.log("📱 Navigating to BalanceScreen");
         navigation.navigate("BalanceScreen" as never);
         break;
 
       case "show_history":
+        console.log("📱 Navigating to TransactionHistoryScreen");
         navigation.navigate("TransactionHistoryScreen" as never);
         break;
 
       case "scan_qr":
+        console.log("📱 Navigating to QRScannerScreen");
         navigation.navigate("QRScannerScreen" as never);
         break;
 
       case "check_fraud":
+        console.log("📱 Navigating to FraudScanner");
         navigation.navigate("FraudScanner" as never);
         break;
 
       case "help_support_page":
+        console.log("📱 Navigating to HelpFaqScreen");
         navigation.navigate("HelpFaqScreen" as never);
         break;
 
       default:
-        console.log("No navigation triggered for:", action);
+        console.log("⚠️ No navigation triggered for:", action);
     }
   };
 
@@ -402,6 +418,8 @@ export default function VoiceAssistantScreen() {
         </View>
 
         <TestConnection />
+
+        <VoiceAssistantDiagnostics />
 
         <ScrollView
           ref={scrollViewRef}

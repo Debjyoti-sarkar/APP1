@@ -93,7 +93,16 @@ interface NexaSafeProviderProps {
 }
 
 // Helper function to sync data to dashboard
+// DISABLED during development to avoid 503 errors from offline localtunnel server
+// Enable by setting ENABLE_DASHBOARD_SYNC to true
+const ENABLE_DASHBOARD_SYNC = false; // Set to true to re-enable dashboard sync
+
 const syncToDashboard = async (endpoint: string, data: any): Promise<void> => {
+  // Skip sync if disabled (to avoid spam logs from offline dashboard)
+  if (!ENABLE_DASHBOARD_SYNC) {
+    return;
+  }
+
   const url = `${DASHBOARD_URL}/api/nexasafe/${endpoint}`;
   console.log(`📊 Syncing to dashboard: ${url}`);
   try {

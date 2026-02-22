@@ -5,8 +5,11 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { Audio } from "expo-av";
 import * as Speech from "expo-speech";
+import { getApiBaseUrl } from "@/config/apiConfig";
 
-const SERVER_BASE = "http://192.168.0.175:5000"; // update if needed
+// IMPORTANT: Uses the same backend as voice assistant (port 3001)
+// Dynamically configured to work on emulator, simulator, and physical devices
+const SERVER_BASE = getApiBaseUrl();
 
 let globalSound: Audio.Sound | null = null;
 
@@ -41,13 +44,16 @@ export async function speak(text: string, languageCode?: string): Promise<void> 
     }
 
     const data = await resp.json();
-    if (!data || !data.ok || !data.audioBase64) {
+    // Handle both format: {audioBase64: "..."} and {audio: "..."}
+    const audioBase64 = data?.audio || data?.audioBase64;
+    if (!data || !audioBase64 || data.ok === false) {
+      console.warn("🔊 TTS response invalid or needs fallback:", data?.message);
       fallbackSpeak(text, languageCode);
       return;
     }
 
     const fileUri = FileSystem.cacheDirectory + `tts_${Date.now()}.mp3`;
-    await FileSystem.writeAsStringAsync(fileUri, data.audioBase64, { encoding: "base64" });
+    await FileSystem.writeAsStringAsync(fileUri, audioBase64, { encoding: "base64" });
 
     globalSound = new Audio.Sound();
     await globalSound.loadAsync({ uri: fileUri }, { shouldPlay: true });
@@ -84,13 +90,16 @@ export async function speakAndWait(text: string, languageCode?: string): Promise
     }
 
     const data = await resp.json();
-    if (!data || !data.ok || !data.audioBase64) {
+    // Handle both format: {audioBase64: "..."} and {audio: "..."}
+    const audioBase64 = data?.audio || data?.audioBase64;
+    if (!data || !audioBase64 || data.ok === false) {
+      console.warn("🔊 TTS response invalid or needs fallback:", data?.message);
       await fallbackSpeakAndWait(text, languageCode);
       return;
     }
 
     const fileUri = FileSystem.cacheDirectory + `tts_${Date.now()}.mp3`;
-    await FileSystem.writeAsStringAsync(fileUri, data.audioBase64, { encoding: "base64" });
+    await FileSystem.writeAsStringAsync(fileUri, audioBase64, { encoding: "base64" });
 
     globalSound = new Audio.Sound();
     await globalSound.loadAsync({ uri: fileUri }, { shouldPlay: true });

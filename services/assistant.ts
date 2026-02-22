@@ -1,7 +1,12 @@
-// Backend API running locally on port 5000
-export const BASE_URL = __DEV__ 
-  ? "http://localhost:5000" 
-  : "https://your-production-api.com";
+import { Platform } from 'react-native';
+import { getApiBaseUrl } from '@/config/apiConfig';
+
+// Backend API running locally on port 3001 (Node.js Express Server)
+// IMPORTANT: Make sure server/simple-voice-server.js is running: npm start in /server directory
+const __DEV__ = true; // Development mode
+
+// Dynamic URL that works for emulator, iOS simulator, and physical devices
+export const BASE_URL = getApiBaseUrl();
 
 export const TRANSCRIBE_URL = BASE_URL + "/assistant/transcribe";
 export const PARSE_URL = BASE_URL + "/assistant/parse";

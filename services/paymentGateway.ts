@@ -9,10 +9,15 @@ import { Platform } from 'react-native';
 // For testing without payment backend, use mock mode
 const USE_MOCK_PAYMENTS = true; // Set to false when payment backend is running
 
+// Payment gateway - using correct machine IP (172.16.7.167)
+// Port may vary if payment service runs separately
+const MACHINE_IP = '172.16.7.167';
+const PAYMENT_PORT = 3001; // Update if payment service uses different port
+
 const API_BASE_URL = Platform.select({
-  android: 'http://172.16.20.46:3000/api/payment',
-  ios: 'http://172.16.20.46:3000/api/payment',
-  default: 'http://localhost:3000/api/payment'
+  android: `http://${MACHINE_IP}:${PAYMENT_PORT}/api/payment`,
+  ios: `http://${MACHINE_IP}:${PAYMENT_PORT}/api/payment`,
+  default: `http://localhost:${PAYMENT_PORT}/api/payment`
 });
 
 export interface PaymentOrder {

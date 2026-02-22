@@ -15,7 +15,7 @@ import { Platform } from 'react-native';
 // Find it by running: ipconfig (Windows) or ifconfig (Mac/Linux)
 // Example: '192.168.1.100' (not localhost or 10.0.2.2)
 const PHYSICAL_DEVICE_IP = '172.16.7.167'; // ← YOUR MACHINE IP (Ethernet)
-const BACKEND_PORT = 5000;
+const BACKEND_PORT = 3001; // Voice server port (NOT 5000)
 
 // =========================================================
 
@@ -39,22 +39,23 @@ export const getApiBaseUrl = (): string => {
     switch (Platform.OS) {
       case 'android':
         // Try emulator first, user can override PHYSICAL_DEVICE_IP if on real device
-        return `http://10.0.2.2:${BACKEND_PORT}/api`;
+        // For physical devices, use PHYSICAL_DEVICE_IP (172.16.7.167)
+        return `http://${PHYSICAL_DEVICE_IP}:${BACKEND_PORT}`;
         
       case 'ios':
-        // iOS simulator uses localhost
-        return `http://localhost:${BACKEND_PORT}/api`;
+        // iOS simulator and devices
+        return `http://${PHYSICAL_DEVICE_IP}:${BACKEND_PORT}`;
         
       case 'web':
         // Web platform uses localhost
-        return `http://localhost:${BACKEND_PORT}/api`;
+        return `http://localhost:${BACKEND_PORT}`;
         
       default:
-        return `http://localhost:${BACKEND_PORT}/api`;
+        return `http://${PHYSICAL_DEVICE_IP}:${BACKEND_PORT}`;
     }
   } else {
     // Production environment
-    return 'https://your-production-api.com/api';
+    return 'https://your-production-api.com';
   }
 };
 
@@ -65,9 +66,9 @@ export const getApiBaseUrl = (): string => {
 export const getPhysicalDeviceUrl = (): string => {
   if (PHYSICAL_DEVICE_IP === '192.168.1.100') {
     console.warn('⚠️  PHYSICAL_DEVICE_IP not configured. Update config/apiConfig.ts with your machine IP');
-    return `http://${PHYSICAL_DEVICE_IP}:${BACKEND_PORT}/api`;
+    return `http://${PHYSICAL_DEVICE_IP}:${BACKEND_PORT}`;
   }
-  return `http://${PHYSICAL_DEVICE_IP}:${BACKEND_PORT}/api`;
+  return `http://${PHYSICAL_DEVICE_IP}:${BACKEND_PORT}`;
 };
 
 /**
