@@ -6,12 +6,11 @@
 import { Platform } from 'react-native';
 import { nexaSafeTracker, SessionData, BehaviorLog } from './NexaSafeTrackerManager';
 
-// Dashboard server URL - change this to your server address
-const DASHBOARD_URL = Platform.select({
-  android: 'http://10.0.2.2:3001', // Android emulator localhost
-  ios: 'http://localhost:3001',
-  default: 'http://localhost:3001'
-});
+// Dashboard server URL - dynamically configured for emulator, simulator, and physical devices
+const MACHINE_IP = '172.16.7.167';
+const DASHBOARD_URL = Platform.OS === 'android' 
+  ? `http://${MACHINE_IP}:3001`  // Physical device or emulator (use machine IP)
+  : `http://${MACHINE_IP}:3001`;  // iOS simulator or web
 
 class NexaSafeDashboardSync {
   private static instance: NexaSafeDashboardSync;

@@ -12,7 +12,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import * as Location from 'expo-location';
-import { Paths, Directory, File } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
+import { File } from 'expo-file-system';
 import { Alert, Platform } from 'react-native';
 import { behaviorAnalysis } from './behaviorAnalysis';
 import { bbaService } from './behavioralBiometricAnalysis';
@@ -858,17 +859,17 @@ class NexaSafeTrackerManager {
 
   private async getSessionFiles(): Promise<string[]> {
     try {
-      const sessionDir = new Directory(Paths.document, 'nexasafe');
-
-      if (!sessionDir.exists) {
-        sessionDir.create();
+      const sessionDirPath = `${FileSystem.documentDirectory}nexasafe/`;
+      
+      const dirInfo = await FileSystem.getInfoAsync(sessionDirPath);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(sessionDirPath, { intermediates: true });
         return [];
       }
 
-      const files = sessionDir.list();
+      const files = await FileSystem.readDirectoryAsync(sessionDirPath);
       return files
-        .filter((f): f is File => f instanceof File && f.name.startsWith('session_log'))
-        .map(f => f.name)
+        .filter(filename => filename.startsWith('session_log'))
         .sort();
     } catch (e) {
       console.error('Error getting session files:', e);
@@ -877,7 +878,7 @@ class NexaSafeTrackerManager {
   }
 
   private async buildBaselineFromSessions(sessionFiles: string[]): Promise<void> {
-    const sessionDir = new Directory(Paths.document, 'nexasafe');
+    const sessionDirPath = `${FileSystem.documentDirectory}nexasafe/`;
     let totalTap = 0;
     let tapCount = 0;
     let totalSwipe = 0;
@@ -885,8 +886,8 @@ class NexaSafeTrackerManager {
 
     for (const fileName of sessionFiles) {
       try {
-        const sessionFile = new File(sessionDir, fileName);
-        const content = await sessionFile.text();
+        const filePath = `${sessionDirPath}${fileName}`;
+        const content = await FileSystem.readAsStringAsync(filePath);
         const session: SessionData = JSON.parse(content);
 
         // Process tap durations
@@ -926,17 +927,18 @@ class NexaSafeTrackerManager {
 
   private async exportSession(sessionData: SessionData): Promise<void> {
     try {
-      const sessionDir = new Directory(Paths.document, 'nexasafe');
-
-      if (!sessionDir.exists) {
-        sessionDir.create();
+      const sessionDirPath = `${FileSystem.documentDirectory}nexasafe/`;
+      
+      const dirInfo = await FileSystem.getInfoAsync(sessionDirPath);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(sessionDirPath, { intermediates: true });
       }
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `session_log_${timestamp}.json`;
+      const filePath = `${sessionDirPath}${filename}`;
 
-      const file = new File(sessionDir, filename);
-      file.write(JSON.stringify(sessionData, null, 2));
+      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(sessionData, null, 2));
 
       console.log(`📁 Session exported to ${filename}`);
     } catch (e) {

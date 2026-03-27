@@ -25,6 +25,18 @@ router.post("/", async (req, res) => {
 
     console.log(`[TTS] Received request: text="${text}", lang="${lang}"`);
 
+    // Check if OpenAI API key is configured
+    if (!OPENAI_KEY) {
+      console.warn("[TTS] ⚠️  OPENAI_API_KEY not configured in server/.env");
+      console.warn("[TTS] Fallback: Client will use device TTS (expo-speech)");
+      // Return success but signal client to use fallback
+      return res.json({ 
+        ok: false,
+        message: "OpenAI key not configured - using device TTS fallback",
+        fallbackToDevice: true 
+      });
+    }
+
     // Use correct OpenAI TTS endpoint
     const OPENAI_TTS_ENDPOINT = "https://api.openai.com/v1/audio/speech";
 
@@ -35,7 +47,7 @@ router.post("/", async (req, res) => {
       input: text,
     };
 
-    console.log(`[TTS] Calling OpenAI with body:`, body);
+    console.log(`[TTS] Calling OpenAI with voice="${voice}"`);
 
     const r = await fetch(OPENAI_TTS_ENDPOINT, {
       method: "POST",
@@ -49,6 +61,18 @@ router.post("/", async (req, res) => {
     if (!r.ok) {
       const txt = await r.text();
       console.error(`[TTS] OpenAI error: ${r.status}`, txt);
+      
+      // Check if it's an API key error
+      if (r.status === 401 || txt.includes("invalid_api_key")) {
+        console.error("[TTS] ❌ Invalid OpenAI API key - check OPENAI_API_KEY in .env");
+        return res.json({
+          ok: false,
+          message: "Invalid OpenAI key - using device TTS fallback",
+          fallbackToDevice: true,
+          error: "invalid_api_key"
+        });
+      }
+      
       return res.status(502).json({ error: "TTS provider error", detail: txt });
     }
 
@@ -57,12 +81,22 @@ router.post("/", async (req, res) => {
     const buffer = Buffer.from(arrayBuffer);
     const base64 = buffer.toString("base64");
 
-    console.log(`[TTS] Successfully generated audio, base64 length: ${base64.length}`);
+    console.log(`[TTS] ✅ Successfully generated audio, size: ${(base64.length / 1024).toFixed(2)}KB`);
 
-    return res.json({ audio: base64, mime: "audio/mpeg" });
+    return res.json({ 
+      ok: true,
+      audio: base64, 
+      mime: "audio/mpeg" 
+    });
   } catch (err) {
     console.error("[TTS] Error:", err);
-    return res.status(500).json({ error: String(err) });
+    // Don't crash - let client fallback to device TTS
+    return res.json({
+      ok: false,
+      message: "TTS error - falling back to device TTS",
+      fallbackToDevice: true,
+      error: err.message
+    });
   }
 });
 

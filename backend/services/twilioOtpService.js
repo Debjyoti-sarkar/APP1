@@ -30,32 +30,57 @@ async function sendOTP(phoneNumber) {
     }
 
     // Validate phone number format
-    if (!phoneNumber.startsWith('+')) {
-      phoneNumber = '+91' + phoneNumber.replace(/^0+/, ''); // Add +91 for Indian numbers
+    let formattedPhone = phoneNumber;
+    
+    // Remove spaces and dashes
+    formattedPhone = formattedPhone.replace(/[\s\-()]/g, '');
+    
+    // If number is 10 digits (Indian), add +91
+    if (formattedPhone.length === 10 && !formattedPhone.startsWith('+')) {
+      formattedPhone = '+91' + formattedPhone;
     }
+    
+    // If number doesn't start with +, add it
+    if (!formattedPhone.startsWith('+')) {
+      formattedPhone = '+' + formattedPhone;
+    }
+
+    console.log(`📱 Sending OTP to: ${formattedPhone}`);
+    console.log(`🔑 Using Verify Service SID: ${verifySid}`);
 
     const verification = await client.verify.v2
       .services(verifySid)
       .verifications.create({
-        to: phoneNumber,
+        to: formattedPhone,
         channel: 'sms',
       });
 
-    console.log('OTP sent successfully:', verification.status);
+    console.log('✅ OTP sent successfully:', {
+      status: verification.status,
+      to: formattedPhone,
+      sid: verification.sid,
+    });
 
     return {
       success: true,
       status: verification.status,
-      to: phoneNumber,
+      to: formattedPhone,
       message: 'OTP sent successfully',
       valid: verification.valid,
+      sid: verification.sid,
     };
   } catch (error) {
-    console.error('Error sending OTP:', error.message);
+    console.error('❌ Error sending OTP:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      details: error,
+    });
+    
     return {
       success: false,
       error: error.message,
-      message: 'Failed to send OTP',
+      message: `Failed to send OTP: ${error.message}`,
     };
   }
 }
@@ -72,36 +97,57 @@ async function verifyOTP(phoneNumber, code) {
       throw new Error('Twilio client not initialized. Check your credentials.');
     }
 
-    // Validate phone number format
-    if (!phoneNumber.startsWith('+')) {
-      phoneNumber = '+91' + phoneNumber.replace(/^0+/, ''); // Add +91 for Indian numbers
+    // Validate phone number format - same as sendOTP
+    let formattedPhone = phoneNumber;
+    
+    // Remove spaces and dashes
+    formattedPhone = formattedPhone.replace(/[\s\-()]/g, '');
+    
+    // If number is 10 digits (Indian), add +91
+    if (formattedPhone.length === 10 && !formattedPhone.startsWith('+')) {
+      formattedPhone = '+91' + formattedPhone;
     }
+    
+    // If number doesn't start with +, add it
+    if (!formattedPhone.startsWith('+')) {
+      formattedPhone = '+' + formattedPhone;
+    }
+
+    console.log(`🔍 Verifying OTP for: ${formattedPhone}`);
 
     const verificationCheck = await client.verify.v2
       .services(verifySid)
       .verificationChecks.create({
-        to: phoneNumber,
-        code: code,
+        to: formattedPhone,
+        code: code.toString().trim(),
       });
 
-    console.log('OTP verification result:', verificationCheck.status);
+    console.log('✅ OTP verification result:', {
+      status: verificationCheck.status,
+      valid: verificationCheck.valid,
+    });
 
     return {
       success: verificationCheck.status === 'approved',
       status: verificationCheck.status,
       valid: verificationCheck.valid,
-      to: phoneNumber,
+      to: formattedPhone,
       message:
         verificationCheck.status === 'approved'
           ? 'OTP verified successfully'
           : 'Invalid or expired OTP',
     };
   } catch (error) {
-    console.error('Error verifying OTP:', error.message);
+    console.error('❌ Error verifying OTP:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+    });
+    
     return {
       success: false,
       error: error.message,
-      message: 'Failed to verify OTP',
+      message: `Failed to verify OTP: ${error.message}`,
     };
   }
 }

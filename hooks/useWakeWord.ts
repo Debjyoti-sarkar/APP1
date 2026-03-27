@@ -40,9 +40,15 @@ export function useWakeWord(onWake: () => void) {
 
   useEffect(() => {
     async function init() {
-      // Skip if Porcupine is not available (Expo Go)
-      if (!PorcupineManager || !PorcupineManager.fromKeywordPaths) {
+      // Skip if Porcupine is not available (Expo Go, or in web/simulator)
+      // Check both module AND method to avoid null reference errors
+      if (!PorcupineManager) {
         console.log("🎤 Wake word detection not available (use development build)");
+        return;
+      }
+      
+      if (typeof PorcupineManager.fromKeywordPaths !== 'function') {
+        console.log("🎤 Wake word method not available");
         return;
       }
 

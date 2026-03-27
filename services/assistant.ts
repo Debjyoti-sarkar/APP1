@@ -1,5 +1,12 @@
-// Your backend is running on PORT 3001 (NOT 3000)
-export const BASE_URL = "https://curvy-sides-carry.loca.lt";
+import { Platform } from 'react-native';
+import { getApiBaseUrl } from '@/config/apiConfig';
+
+// Backend API running locally on port 3001 (Node.js Express Server)
+// IMPORTANT: Make sure server/simple-voice-server.js is running: npm start in /server directory
+const __DEV__ = true; // Development mode
+
+// Dynamic URL that works for emulator, iOS simulator, and physical devices
+export const BASE_URL = getApiBaseUrl();
 
 export const TRANSCRIBE_URL = BASE_URL + "/assistant/transcribe";
 export const PARSE_URL = BASE_URL + "/assistant/parse";
